@@ -31,6 +31,18 @@ class ClaudeParsingTests(unittest.TestCase):
         actual = asdict(records[0])
         self.assertEqual(actual, expected)
 
+    def test_parse_jsonl_with_blanks_and_comments(self):
+        root = Path(__file__).parent / "fixtures"
+        source = root / "claude_minimal_with_blanks.jsonl_input"
+        expected = json.loads((root / "claude_minimal.jsonl").read_text(encoding="utf-8"))
+
+        importer = ClaudeImporter()
+        records = importer.parse(source, options={"project": None, "platform": "Claude"})
+
+        self.assertEqual(len(records), 1)
+        actual = asdict(records[0])
+        self.assertEqual(actual, expected)
+
 
 if __name__ == "__main__":
     unittest.main()

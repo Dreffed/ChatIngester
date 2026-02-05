@@ -157,6 +157,18 @@ python main.py   --export-path /exports/claude.zip   --export-path /exports/chat
 python main.py   --export-path /exports/claude.zip   --parser claude   --export-path /exports/custom.json   --parser my_custom_parser   --out-jsonl conversations.jsonl
 ```
 
+### Output Overrides with --set
+
+```bash
+python main.py   --config configs/local.yaml   --set outputs[0].type=jsonl   --set outputs[0].path=/output/conversations.jsonl
+```
+
+### Notion Dry-Run (No Network)
+
+```bash
+python main.py   --export-path /path/to/claude-export   --parser claude   --set outputs[0].type=notion   --set outputs[0].dry_run=true
+```
+
 ### Export + Markdown
 
 ```bash

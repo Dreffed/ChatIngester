@@ -42,6 +42,13 @@ Notes:
 - `mode: explicit` uses the specified parser and skips detection.
 - `mode: hybrid` honors explicit fields, then auto-detects remaining files.
 
+`--set` supports list indices using brackets:
+
+```bash
+--set outputs[0].type=jsonl
+--set outputs[0].path=/output/conversations.jsonl
+```
+
 ## Outputs
 ```yaml
 outputs:
@@ -94,3 +101,9 @@ project: null
 platform: null
 ```
 
+## Environment Overrides
+- Prefix: `CHATINGESTER__`
+- Separator: double underscore (`__`)
+- Example:
+  - `CHATINGESTER__PROJECT=Research`
+  - `CHATINGESTER__OUTPUTS__0__TYPE=jsonl`

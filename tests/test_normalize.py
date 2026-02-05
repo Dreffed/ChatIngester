@@ -27,6 +27,13 @@ class NormalizeTests(unittest.TestCase):
         normalized = normalize_records([a, b, c, d])
         self.assertEqual([r.id for r in normalized], ["1", "3"])
 
+    def test_dedupe_by_url_when_ids_unique(self):
+        a = ConversationRecord(id="1", title="A", platform="X", url="http://a")
+        b = ConversationRecord(id="2", title="B", platform="X", url="http://a")
+
+        normalized = normalize_records([a, b])
+        self.assertEqual([r.id for r in normalized], ["1"])
+
 
 if __name__ == "__main__":
     unittest.main()

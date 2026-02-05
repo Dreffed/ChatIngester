@@ -15,6 +15,7 @@ from chatingester.core.pipeline import Pipeline
 from chatingester.core.registry import ExporterRegistry, ImporterRegistry
 from chatingester.exporters.jsonl import JsonlExporter
 from chatingester.exporters.markdown import MarkdownExporter
+from chatingester.exporters.notion import NotionExporter
 from chatingester.importers.claude import ClaudeImporter
 
 
@@ -92,6 +93,7 @@ def build_exporter_registry() -> ExporterRegistry:
     registry = ExporterRegistry()
     registry.register(JsonlExporter)
     registry.register(MarkdownExporter)
+    registry.register(NotionExporter)
     return registry
 
 

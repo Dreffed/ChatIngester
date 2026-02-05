@@ -46,9 +46,10 @@ class ClaudeImporter(Importer):
 
         if suffix == ".jsonl":
             for line in source_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
                     continue
-                payload = json.loads(line)
+                payload = json.loads(stripped)
                 records.extend(
                     self._parse_payload(payload, platform=platform, project=project)
                 )

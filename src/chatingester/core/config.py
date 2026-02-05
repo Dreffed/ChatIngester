@@ -43,26 +43,78 @@ def merge_dicts(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any
     return result
 
 
-def set_by_path(config: Dict[str, Any], path: Iterable[str], value: Any) -> None:
-    current = config
+def _parse_path(key: str) -> List[str | int]:
+    parts: List[str | int] = []
+    buffer = ""
+    idx_buffer = ""
+    in_index = False
+
+    for char in key:
+        if char == "." and not in_index:
+            if buffer:
+                parts.append(buffer)
+                buffer = ""
+            continue
+        if char == "[":
+            if buffer:
+                parts.append(buffer)
+                buffer = ""
+            in_index = True
+            idx_buffer = ""
+            continue
+        if char == "]" and in_index:
+            if not idx_buffer.isdigit():
+                raise ConfigError(f"Invalid list index in key: {key}")
+            parts.append(int(idx_buffer))
+            in_index = False
+            continue
+        if in_index:
+            idx_buffer += char
+        else:
+            buffer += char
+
+    if in_index:
+        raise ConfigError(f"Unclosed list index in key: {key}")
+    if buffer:
+        parts.append(buffer)
+    return parts
+
+
+def set_by_path(config: Dict[str, Any], path: Iterable[str | int], value: Any) -> None:
+    current: Any = config
     parts = list(path)
     for part in parts[:-1]:
-        if part not in current or not isinstance(current[part], dict):
+        if isinstance(part, int):
+            if not isinstance(current, list):
+                raise ConfigError("List index used on non-list container")
+            while len(current) <= part:
+                current.append({})
+            current = current[part]
+            continue
+        if part not in current or not isinstance(current[part], (dict, list)):
             current[part] = {}
         current = current[part]
-    current[parts[-1]] = value
+    last = parts[-1]
+    if isinstance(last, int):
+        if not isinstance(current, list):
+            raise ConfigError("List index used on non-list container")
+        while len(current) <= last:
+            current.append(None)
+        current[last] = value
+        return
+    current[last] = value
 
 
-def parse_set_values(pairs: Iterable[str]) -> Dict[Tuple[str, ...], str]:
-    values: Dict[Tuple[str, ...], str] = {}
+def parse_set_values(pairs: Iterable[str]) -> Dict[Tuple[str | int, ...], str]:
+    values: Dict[Tuple[str | int, ...], str] = {}
     for pair in pairs:
         if "=" not in pair:
             raise ConfigError(f"Invalid --set value: {pair}")
         key, value = pair.split("=", 1)
-        path = tuple(part for part in key.split(".") if part)
-        if not path:
+        parts = _parse_path(key)
+        if not parts:
             raise ConfigError(f"Invalid --set key: {pair}")
-        values[path] = value
+        values[tuple(parts)] = value
     return values
 
 
@@ -73,6 +125,26 @@ def apply_set_overrides(config: Dict[str, Any], pairs: Iterable[str]) -> Dict[st
     return result
 
 
+def _parse_env_path(key: str) -> List[str | int]:
+    parts: List[str | int] = []
+    for segment in key.split("__"):
+        if not segment:
+            continue
+        if segment.isdigit():
+            parts.append(int(segment))
+        else:
+            parts.append(segment.lower())
+    return parts
+
+
 def apply_env_overrides(config: Dict[str, Any]) -> Dict[str, Any]:
-    # Placeholder: env mapping will be defined with config schema.
-    return config
+    result = dict(config)
+    prefix = "CHATINGESTER__"
+    for env_key, value in os.environ.items():
+        if not env_key.startswith(prefix):
+            continue
+        path = _parse_env_path(env_key[len(prefix) :])
+        if not path:
+            continue
+        set_by_path(result, path, value)
+    return result
