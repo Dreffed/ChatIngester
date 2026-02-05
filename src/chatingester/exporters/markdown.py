@@ -1,6 +1,7 @@
 """Markdown exporter."""
 from __future__ import annotations
 
+import ast
 import json
 import re
 from dataclasses import asdict
@@ -24,6 +25,8 @@ def _extract_text(value: object) -> str:
     if isinstance(value, dict):
         if "text" in value:
             return str(value.get("text") or "")
+        if "thinking" in value:
+            return str(value.get("thinking") or "")
         if "value" in value:
             return str(value.get("value") or "")
         if "parts" in value and isinstance(value.get("parts"), list):
@@ -38,14 +41,25 @@ def _try_parse_json_text(value: str) -> object | None:
     try:
         return json.loads(stripped)
     except Exception:
-        return None
+        try:
+            parsed = ast.literal_eval(stripped)
+            if isinstance(parsed, (dict, list)):
+                return parsed
+        except Exception:
+            return None
+    return None
 
 
 def _format_key_value(label: str, value: object) -> List[str]:
     if value is None or value == "":
         return []
     if isinstance(value, (dict, list)):
-        return [f"- {label}: {json.dumps(value, ensure_ascii=True)}"]
+        return [
+            f"- {label}:",
+            "```json",
+            json.dumps(value, indent=2, ensure_ascii=True),
+            "```",
+        ]
     return [f"- {label}: {value}"]
 
 
@@ -62,23 +76,51 @@ def _format_message(message) -> List[str]:
     if isinstance(content, (dict, list)):
         parsed = content
 
+    def _format_parsed_dict(parsed_dict: dict) -> List[str]:
+        block: List[str] = []
+        text_keys = {"text", "thinking", "value", "parts"}
+        for key in sorted(parsed_dict.keys()):
+            if key in text_keys:
+                continue
+            block.extend(_format_key_value(key, parsed_dict.get(key)))
+
+        for key in sorted(text_keys):
+            if key not in parsed_dict:
+                continue
+            text = _extract_text(parsed_dict.get(key))
+            if text.strip():
+                block.append("")
+                block.append(f"#### {key}")
+                block.append("")
+                block.append(text)
+        block.extend(
+            [
+                "",
+                "#### Segment JSON",
+                "```json",
+                json.dumps(parsed_dict, indent=2, ensure_ascii=True),
+                "```",
+            ]
+        )
+        return block
+
     if isinstance(parsed, dict):
-        lines.extend(_format_key_value("Type", parsed.get("type")))
-        lines.extend(_format_key_value("Flags", parsed.get("flags")))
-        lines.extend(_format_key_value("Citations", parsed.get("citations")))
-        lines.extend(_format_key_value("Timestamp", parsed.get("timestamp") or parsed.get("created_at")))
-        text = _extract_text(parsed)
-        if text.strip():
-            lines.append("")
-            lines.append(text)
-        remaining = {
-            key: value
-            for key, value in parsed.items()
-            if key
-            not in {"type", "flags", "citations", "timestamp", "created_at", "text", "value", "parts"}
-        }
-        if remaining:
-            lines.extend(["", "#### Message JSON", "```json", json.dumps(remaining, indent=2, ensure_ascii=True), "```"])
+        lines.extend(_format_parsed_dict(parsed))
+        return lines
+
+    if isinstance(parsed, list):
+        for idx, item in enumerate(parsed, start=1):
+            if isinstance(item, dict):
+                lines.extend(_format_key_value("Segment", idx))
+                lines.extend(_format_parsed_dict(item))
+                lines.append("")
+            else:
+                text = _extract_text(item)
+                if text.strip():
+                    lines.extend(_format_key_value("Segment", idx))
+                    lines.append("")
+                    lines.append(text)
+                    lines.append("")
         return lines
 
     text = _extract_text(content)

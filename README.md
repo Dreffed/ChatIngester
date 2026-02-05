@@ -279,6 +279,8 @@ Recommended tests:
 - Replace vs append content strategy
 - Bi-directional Notion updates
 - Search-based incremental sync
+- Per-conversation JSON exports
+- Per-conversation export bundles organized by conversation UUID
 
 ---
 
@@ -316,4 +318,16 @@ If your environment doesn't auto-discover `tests/`, run:
 
 ```bash
 python -m unittest discover -s tests
+```
+
+## JSON Schema Extraction
+
+```bash
+python -m chatingester.tools.json_schema path/to/file.json --out schema.json
+```
+
+For JSONL, the tool samples up to 200 items by default:
+
+```bash
+python -m chatingester.tools.json_schema path/to/file.jsonl --max-items 500
 ```

@@ -9,6 +9,21 @@ from chatingester.importers.base import Importer
 from chatingester.models.canonical import ConversationRecord, Message
 
 
+def _coerce_text(value: object) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return "\n".join(str(part) for part in value if part is not None)
+    if isinstance(value, dict):
+        if "text" in value:
+            return str(value.get("text") or "")
+        if "value" in value:
+            return str(value.get("value") or "")
+        if "parts" in value and isinstance(value.get("parts"), list):
+            return "\n".join(str(part) for part in value.get("parts") if part is not None)
+    return str(value)
+
+
 class ClaudeImporter(Importer):
     name = "claude"
 
@@ -82,17 +97,17 @@ class ClaudeImporter(Importer):
                     role = "user"
                 content = message.get("content")
                 if isinstance(content, dict):
-                    content = content.get("text") or content.get("value")
+                    content = content.get("text") or content.get("value") or content
                 if content is None:
-                    content = message.get("text") or ""
+                    content = message.get("text") or message.get("content") or ""
                 messages.append(
                     Message(
                         role=role,
-                        content=str(content),
+                        content=content,
                         created_at=message.get("created_at"),
                     )
                 )
-                transcript_lines.append(f"{role}: {content}")
+                transcript_lines.append(f"{role}: {_coerce_text(content)}")
 
             records.append(
                 ConversationRecord(

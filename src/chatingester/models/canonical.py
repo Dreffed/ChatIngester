@@ -16,7 +16,7 @@ class Attachment:
 @dataclass
 class Message:
     role: str
-    content: str
+    content: Any
     created_at: Optional[str] = None
     attachments: List[Attachment] = field(default_factory=list)
     extra: Dict[str, Any] = field(default_factory=dict)

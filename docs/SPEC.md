@@ -313,3 +313,9 @@ docs/SPEC.md
   3. Environment variables
   4. CLI flags
 - Config file format is defined in `docs/CONFIG.md`.
+
+## 17. Future Features
+
+- Per-conversation JSON exports
+- Per-conversation export bundles organized by conversation UUID
+- Graph database storage (deferred; requires Docker Compose setup)
